@@ -1,7 +1,9 @@
 Proof of Concept Node.js src virus
 ==================================
 
-## `payload.js`
+## Files
+
+### `payload.js`
 
 This script defines a function called `infect`, taking some JS code as input (encoded using `encodeURI`).
 
@@ -17,7 +19,7 @@ This script defines a function called `infect`, taking some JS code as input (en
       1. executes the decoded input JS code
       2. expecting the code to have defined an `infect` function, calls it on the encoded input JS code
 
-## `build.js`
+### `build.js`
 
 This script leverages `payload.js` to create a minified, self replicating source code virus. It works by:
   1. compiling `payload.js` to `ES2016`
@@ -27,9 +29,10 @@ This script leverages `payload.js` to create a minified, self replicating source
       1. executes the decoded `payload.js`
       2. passes the encoded `payload.js` into payload's `infect` function
 
-## `virus.js`
+### `virus.js`
 
-This script actually sparks the virus and will cause all applicable node.js projects to become infected
+This file contains the minimized payload injected into an empty file. Running this script will cause the virus to propagate to all projects in the home folder.
+
 
 
 
