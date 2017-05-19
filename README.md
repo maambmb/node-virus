@@ -9,15 +9,11 @@ This script defines a function called `infect`, taking some JS code as input (en
 
 `infect` works as follows:
 
-  1. It recursively searches for all `package.json` files from the user's home folder
-  2. From the `package.json` it tries to find a candidate file to infect. It searches, in order for the following files (stopping at the first match):
-      1. `index.js`
-      2. `${packagejson.name}.js`
-      3. `app.js`
-      4. `${packagejson.main}`
-  3. For each target file, if it hasn't already been injected (check via `str.indexOf`), inject code that:
-      1. executes the decoded input JS code
-      2. expecting the code to have defined an `infect` function, calls it on the encoded input JS code
+  1. It recursively searches for folders that contain a `package.json` file.
+  2. For each candidate folder, if there exists an `index.js` and it hasn't already been injected (check via `str.indexOf`), inject code that:
+      1. decodes the URI encoded input.
+      2. executes the decoded input.
+      3. expecting the result of the above execution to have defined an `infect` function as a global variable, calls it on the encoded input.
 
 ### `build.js`
 

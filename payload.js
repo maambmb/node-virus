@@ -14,8 +14,6 @@ function infect( payload ) {
         })();
     `;
 
-    // wrapped standard file-system methods in promises so we can use await/async syntax
-
     function readFile( f ) {
         return new Promise( function( rs, rj ) {
             fs.readFile( f, (e,r) => e ? rj( e ) : rs( r ) );
