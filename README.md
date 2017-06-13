@@ -5,33 +5,27 @@ Proof of Concept Node.js src virus
 
 ### `payload.js`
 
-This script defines a global function: `global.infect`, taking some URI encoded JS code as input.
+This script declares a global function: `global.infect`. It takes one argument: `payload`, which is the string representation of some javascript code to be injected.
 
-`global.infect` works as follows:
+`global.infect` works by recursively scanning folders (from the home directory), looking for a `package.json`. The scan will continue until a maximum depth of 10 before aborting. For each `package.json` found, it reads the contents to deduce the main script file (defaulting to `index.js` if not specified in `package.json`). If the main script indeed exists, the following fragment of code is appended to the file:
 
-  1. It recursively searches for folders (from the home directory) that contain a `package.json` file up until a maximum depth of 10.
-  2. For each candidate folder, it attempts to find a main script using the `main` key inside of `package.json`, or failing that: `index.js`. After it finds the main script, it does the following things:
-      1. decodes the URI encoded input.
-      2. executes the decoded input.
-      3. expecting the result of the above execution to have defined a `global.infect` function, calls it on the encoded input.
+```javascript
+    (function() {
+        var payload = "<ESCAPED_PAYLOAD>";
+        eval(payload);
+        global.infect( payload );
+    })();
+```
+
+Lets call this fragment of code, a **runner**. N.B. `<ESCAPED_PAYLOAD>` is the input argument of `global.infect` transformed as follows:
+
+```javascript
+    payload.replace( /[\\"]/g, "\\$&" )
+```
+
+To actually create the virus, we simply run the `global.infect` function on a minified representation of itself (i.e. `payload.js`). 
+
 
 ### `build.js`
 
-This script leverages `payload.js` to create a minified, self replicating source code virus. It works by:
-  1. compiling `payload.js` to `ES2015`
-  2. compressing the result 
-  3. encoding the result (using `encodeURI`)
-  3. creating a file called `payload.built.js` that:
-      1. executes the decoded `payload.js`
-      2. passes the encoded `payload.js` into payload's `infect` function
-
-### `payload.built.js`
-
-This file contains the minimized payload injected into an empty file. Running this script will cause the virus to propagate to all projects in the home folder.
-
-
-
-
-
-
-
+This script simply creates a new file with the runner. The payload is set as the string representation of the minified `payload.js`. Essentially this can be thought of as infecting a blank/empty JS script. The resultant file is now "infectious", and running it will cause the virus to propagate as described above.
