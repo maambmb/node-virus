@@ -4,14 +4,13 @@ const exec = require( "child-process-promise" ).exec;
 const maliciousAction = "(() => null)();";
 
 function getCopyOfVirus( virusSrc, action ) {
-    const esc = str => str
-        .replace(/[\\"]/g, "\\$&")
-        .replace(/[\n\r]/g, "\\n");
+    const enc = x => Buffer.from( x ).toString( "base64" );
     return `
 (function() {
-    var virusSrc = "${ esc( virusSrc ) }";
-    var action   = "${ esc( action ) }";
-    eval( action + virusSrc + "infect(virusSrc, action);" ); 
+    var virusSrc = "${ enc( virusSrc ) }";
+    var action   = "${ enc( action ) }";
+    const dec = x => Buffer.from( x, "base64" ).toString();
+    eval( dec(action) + dec(virusSrc) + "infect( virusSrc, action );" ); 
 })();`;
 }
 
